@@ -15,50 +15,65 @@ st.title("🐟 Mugilidae Fish Classification System")
 st.markdown("### Identify 5 Mullet Species")
 st.markdown("---")
 
-# Google Drive file ID untuk CNN model
-# Gantikan dengan FILE ID anda
-CNN_FILE_ID = "1s1SQth82DZ_QQrbNQf33OT4EsaHDDy36"  # <--- GANTIKAN INI!
+# GANTIKAN DENGAN FILE ID ANDA
+CNN_FILE_ID = "1s1SQth82DZ_QQrbNQf33OT4EsaHDDy36"  # GANTIKAN INI!
 
 @st.cache_resource
 def load_models():
     models = {}
     
-    # Load CNN model from Google Drive
+    # Load CNN model from Google Drive (TRY DIFFERENT METHOD)
     try:
-        url = f"https://drive.google.com/uc?id={CNN_FILE_ID}"
+        # Method 1: Try different URL format
+        url = f"https://drive.google.com/uc?export=download&id={CNN_FILE_ID}"
+        
+        # Alternative URL format
+        # url = f"https://drive.google.com/uc?id={CNN_FILE_ID}&export=download"
+        
         output = "mugilidae_cnn_test.h5"
         
-        # Download if not exists
         if not os.path.exists(output):
             with st.spinner("Downloading CNN model from Google Drive..."):
-                gdown.download(url, output, quiet=False)
+                # Try with fuzzy matching disabled
+                gdown.download(url, output, quiet=False, fuzzy=False)
         
         models['cnn'] = load_model(output, compile=False)
         
-        # Load species names
         models['cnn_species'] = [
             "Planiliza_subviridis", "Moolgarda_seheli", 
             "Osteomugil_perusii", "Moolgarda_tade", "Ellochelon_vaigiensis"
         ]
         st.success("✅ CNN model loaded from Google Drive!")
     except Exception as e:
+        st.error(f"CNN model error: {e}")
+        st.info("💡 Please check that:\n"
+                "1. File permission is 'Anyone with the link'\n"
+                "2. File ID is correct\n"
+                "3. Try the direct link: https://drive.google.com/file/d/1s1SQth82DZ_QQrbNQf33OT4EsaHDDy36/view")
         models['cnn'] = None
-        st.warning(f"CNN model not loaded: {e}")
     
-    # Load measurement models
+    # Load measurement models (from local files in GitHub)
     try:
         models['ann'] = joblib.load('ann_pso_model.pkl')
         models['scaler'] = joblib.load('scaler.pkl')
         models['label_encoder'] = joblib.load('label_encoder.pkl')
-        st.success("✅ Measurement model loaded!")
-    except Exception as e:
+        st.success("✅ Measurement model loaded from GitHub!")
+    except FileNotFoundError as e:
+        st.error(f"File not found: {e}")
+        st.info("📁 Please upload these files to GitHub:\n"
+                "  - ann_pso_model.pkl\n"
+                "  - scaler.pkl\n"
+                "  - label_encoder.pkl")
         models['ann'] = None
-        st.warning(f"Measurement model error: {e}")
+    except Exception as e:
+        st.error(f"Measurement model error: {e}")
+        models['ann'] = None
     
     return models
 
 models = load_models()
 
+# Rest of the app (same as before)
 st.sidebar.header("📋 About")
 st.sidebar.info("""
 **5 Mugilidae Species:**
@@ -70,18 +85,12 @@ st.sidebar.info("""
 
 **TEST VERSION** (15 images/species)
 - Accuracy: 40-60%
-- Final version with 500 images coming soon
 """)
 
 tab1, tab2 = st.tabs(["📸 Image Classification", "📏 Measurement Classification"])
 
-# ===============================
-# TAB 1: IMAGE CLASSIFICATION
-# ===============================
-
 with tab1:
     st.header("Identify Fish from Photo")
-    st.caption("⚠️ Test version with limited images")
     
     if models['cnn'] is not None:
         uploaded = st.file_uploader("Upload fish image", type=['jpg', 'jpeg', 'png'])
@@ -95,12 +104,10 @@ with tab1:
             
             if st.button("🔍 Identify Species", key="img_predict"):
                 with st.spinner("Analyzing image..."):
-                    # Preprocess
                     img = image.resize((224, 224))
                     img_array = np.array(img) / 255.0
                     img_array = np.expand_dims(img_array, axis=0)
                     
-                    # Predict
                     pred = models['cnn'].predict(img_array, verbose=0)[0]
                     top_idx = np.argmax(pred)
                     
@@ -109,14 +116,8 @@ with tab1:
                         st.success(f"### 🎯 {species_name}")
                         st.progress(int(pred[top_idx] * 100))
                         st.caption(f"Confidence: {pred[top_idx]*100:.1f}%")
-                    
-                    st.info("💡 Test version: 15 images/species. Final version with 500 images will be more accurate!")
     else:
-        st.info("📸 CNN model loading from Google Drive...")
-
-# ===============================
-# TAB 2: MEASUREMENT CLASSIFICATION
-# ===============================
+        st.info("📸 CNN model not available. Please check Google Drive settings.")
 
 with tab2:
     st.header("Identify from Measurements")
@@ -155,7 +156,7 @@ with tab2:
             species = models['label_encoder'].inverse_transform([pred])[0]
             st.success(f"### 🎯 {species}")
     else:
-        st.error("Measurement model not found")
+        st.error("Measurement models not found. Please upload .pkl files to GitHub.")
 
 st.markdown("---")
 st.caption("TEST VERSION | Powered by ANN-PSO + CNN | FYP Project")
