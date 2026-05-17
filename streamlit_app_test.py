@@ -17,7 +17,7 @@ st.markdown("---")
 
 # Google Drive file ID untuk CNN model
 # Gantikan dengan FILE ID anda
-CNN_FILE_ID = "1s1SQth82DZ_QQrbNQf33OT4EsaHDDy36"  # <--- GANTIKAN INI!
+CNN_FILE_ID = 1s1SQth82DZ_QQrbNQf33OT4EsaHDDy36  # <--- GANTIKAN INI!
 
 @st.cache_resource
 def load_models():
